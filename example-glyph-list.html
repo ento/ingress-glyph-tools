@@ -2,34 +2,144 @@
 <html lang="ja" xmlns="http://www.w3.org/1999/xhtml">
   <head>
     <meta charset="UTF-8" />
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jquery/2.1.1/jquery.min.js"></script>
+    <script src="http://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.10.4/jquery-ui.min.js"></script>
+    <script type="text/javascript" src="jquery.event.drag-2.2.js" charset="utf-8"></script>
     <script type="text/javascript" src="glyph-tools.js" charset="utf-8"></script>
     <script type="text/javascript" src="glyph-dic.js" charset="utf-8"></script>
     <title>Glyph List - Ingress Glyph Tools</title>
+    <style>
+body {
+}
+.draggable  {
+/*  position: absolute;*/
+  display: inline-table;
+  border: 1px solid white;
+}
+.draggable table {
+}
+.draggable.selected table {
+  background: #ffcccc;
+}
+.draggable.selected td {
+  background: #ffcccc;
+}
+    </style>
   </head>
   <body>
+    <button id="download">Download All</button>
     <script>
       (function(){
           var gm9igt = gm9.IngressGlyphTools;
 
-          var table = document.createElement("table");
-          table.setAttribute("border", "1");
+          var seenGlyphs = {};
+
+          var parent = document.createElement("div");
+          //table.setAttribute("border", "1");
 
           for(var i = 0; i < gm9igt.glyphtionary.getEntryCount(); ++i){
               var entry = gm9igt.glyphtionary.getEntryAt(i);
-              var tr = document.createElement("tr");
+              var glyphStr = entry.keyGlyph.toString();
+              if (seenGlyphs.hasOwnProperty(glyphStr)){
+                  continue;
+              }
+              seenGlyphs[glyphStr] = true;
+              var mirrors = entry.keyGlyph.getUniqueMirrors();
+              var glyphs = [entry];
+              for (var j = 0; j < mirrors.length; j++){
+                  var mirrorGlyph = mirrors[j];
+                  if (!mirrorGlyph){
+                      continue;
+                  }
+                  var mirrorValue = gm9igt.glyphtionary.get(mirrorGlyph);
+                  if (!mirrorValue){
+                      continue;
+                  }
+                  var mirrorString = mirrorGlyph.toString();
+                  if (seenGlyphs.hasOwnProperty(mirrorString)){
+                      continue;
+                  }
+                  seenGlyphs[mirrorString] = true;
+                  glyphs.push({keyGlyph: mirrorGlyph, value: mirrorValue});
+              }
 
-              var tdGlyph = document.createElement("td");
-              tdGlyph.appendChild(gm9igt.createGlyphImage(entry.keyGlyph, 64));
-              tr.appendChild(tdGlyph);
+              var glyphSize = 190;
+              var glyphCenter = glyphSize * 0.5;
+              var glyphRadius = glyphSize * 0.35;
+              for (var j = 0; j < glyphs.length; j++){
+                  //var div = document.createElement("div");
+                  //div.setAttribute("class", "draggable");
+                  var table = document.createElement("table");
+                  table.setAttribute("class", "draggable");
+                  //div.appendChild(table);
+                  var tr = document.createElement("tr");
+                  table.appendChild(tr);
 
-              var tdWord = document.createElement("td");
-              tdWord.appendChild(document.createTextNode(entry.value));
-              tr.appendChild(tdWord);
+                  var entry = glyphs[j];
+                  var tdGlyph = document.createElement("td");
+                  var canvas = document.createElement("canvas");
+                  canvas.setAttribute("width", glyphSize);
+                  canvas.setAttribute("height", glyphSize);
+                  var ctx = canvas.getContext("2d");
 
-              table.appendChild(tr);
+                  ctx.lineJoin = "round";
+                  ctx.lineCap = "round";
+
+                  ctx.strokeStyle = "#555";
+                  ctx.fillStyle = "rgba(255, 255, 255, 0.5)";
+                  ctx.lineWidth = Math.max(1, glyphSize * 0.01);
+                  gm9igt.drawGrid(ctx, glyphCenter, glyphCenter, glyphRadius, 4, function(ctx, x, y, r){
+                      ctx.beginPath();
+                      ctx.arc(x, y, r, 0, 2*Math.PI, false);
+                      ctx.stroke();
+                      ctx.fill();
+                  });
+
+                  ctx.strokeStyle = "#444";
+                  ctx.shadowBlur = Math.max(4, glyphSize * 0.01);
+                  ctx.shadowColor = "#000";
+                  ctx.lineWidth = Math.max(3, glyphSize * 0.03);
+                  gm9igt.drawGlyph(ctx, glyphCenter, glyphCenter, glyphRadius, entry.keyGlyph);
+
+                  var tdLink = document.createElement("a");
+                  tdLink.setAttribute("href", canvas.toDataURL());
+                  tdLink.setAttribute("download", entry.value[0] + ".png");
+                  tdLink.appendChild(canvas);
+                  tdGlyph.appendChild(tdLink);
+                  tr.appendChild(tdGlyph);
+
+                  var tdWord = document.createElement("td");
+                  tdWord.appendChild(document.createTextNode(entry.value));
+                  tr.appendChild(tdWord);
+                  //parent.appendChild(div);
+                  parent.appendChild(table);
+              }
           }
 
-          gm9igt.getLastScriptNode().parentNode.appendChild(table);
+          gm9igt.getLastScriptNode().parentNode.appendChild(parent);
+
+          $('#download').on('click', function() {
+              $('a').each(function() {
+                  var a = document.createElement('a');
+                  a.href = this.href;
+                  a.download = this.download;
+                  a.click();
+              });
+          });
+$('.draggable').click(function(){
+    $(this).toggleClass("selected");
+})
+$('.draggable').drag("init", function() {
+
+        return $('.selected');
+
+}).drag(function(ev, dd) {
+    $( this ).css({
+            top: dd.offsetY,
+            left: dd.offsetX
+        });
+});
+
       })();
     </script>
   </body>

@@ -416,6 +416,67 @@
             uniqueSortedArray(indices);
             return indices;
         },
+        transform: function(indexTransformer){
+            var glyph = new Glyph();
+            try {
+                for(var i = 0; i < this.edges.size(); ++i){
+                    var edge = this.edges.at(i);
+                    var a = indexTransformer(edge.a);
+                    var b = indexTransformer(edge.b);
+                    glyph.addEdge(new Edge(a, b));
+                }
+                return glyph;
+            } catch (e) {
+                return null;
+            }
+        },
+        getMirrors: function(){
+            var mirrors = [];
+            // horizontal mirror
+            mirrors.push(this.transform(function(n) {
+              if (n < 10) {
+                  if (n >= 8) return -n + 17;
+                  if (n >= 6) return -n + 13;
+                  if (n >= 4) return -n + 9;
+                  return -n + 3;
+              } else {
+                  return n;
+              }
+            }));
+            // vertical mirror
+            mirrors.push(this.transform(function(n) {
+                if (0 < n && n < 10) {
+                    if (n >= 6) return -n + 15;
+                    return -n + 6;
+                } else {
+                    return n;
+                }
+            }));
+            // 30 degrees rotation
+            mirrors.push(this.transform(function(n) {
+                if (n == 7 || n == 9) {
+                    throw "Illegal argument: " + n;
+                }
+                if (n < 10) {
+                    if (n == 5) return 0;
+                    return n + 1;
+                } else {
+                    return n;
+                }
+            }));
+            // 180 degrees rotation
+            mirrors.push(this.transform(function(n) {
+                if (n < 10) {
+                    if (n >= 8) return n - 2;
+                    if (n >= 6) return n + 2;
+                    if (n >= 3) return n - 3;
+                    return n + 3;
+                } else {
+                    return n;
+                }
+            }));
+            return mirrors;
+        },
         clone: function(){
             var newGlyph = new Glyph();
             newGlyph.edges = this.edges.clone();
